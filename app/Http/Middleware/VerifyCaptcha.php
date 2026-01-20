@@ -25,9 +25,9 @@ class VerifyCaptcha
             return $next($request);
         }
 
-        $success = $this->verifyCaptcha($captchaType, $request, $secretKey);
-
-        return $success ? $next($request) : $this->sendFailedResponse($request);
+        return $this->verifyCaptcha($captchaType, $request, $secretKey)
+            ? $next($request)
+            : $this->sendFailedResponse($request);
     }
 
     protected function sendFailedResponse(Request $request): Response
