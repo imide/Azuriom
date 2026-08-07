@@ -198,6 +198,8 @@ class RoleController extends Controller
     {
         $this->authorize('update', $role);
 
+        // Note: permissions are kept identical to the original role, without
+        // filtering, as the duplicated role keeps the same power as original.
         $copy = $role->load('permissions')->replicate();
         $copy->fill(['name' => $this->uniqueDuplicateName($role)])->save();
 

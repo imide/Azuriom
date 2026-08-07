@@ -213,13 +213,15 @@ class UpdateManager
     {
         $userAgent = 'Azuriom updater (v'.Azuriom::version().' - '.url('/').')';
 
-        $request = Http::withUserAgent($userAgent)->withHeaders([
-            'Azuriom-Version' => Azuriom::version(),
-            'Azuriom-PHP-Version' => PHP_VERSION,
-            'Azuriom-Locale' => app()->getLocale(),
-            'Azuriom-Game' => game()->id(),
-            'Azuriom-Users' => is_installed() ? User::count() : 0,
-        ]);
+        $request = Http::connectTimeout(5)
+            ->withUserAgent($userAgent)
+            ->withHeaders([
+                'Azuriom-Version' => Azuriom::version(),
+                'Azuriom-PHP-Version' => PHP_VERSION,
+                'Azuriom-Locale' => app()->getLocale(),
+                'Azuriom-Game' => game()->id(),
+                'Azuriom-Users' => is_installed() ? User::count() : 0,
+            ]);
 
         $siteKey = setting('site-key');
 

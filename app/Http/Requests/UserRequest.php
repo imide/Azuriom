@@ -22,9 +22,9 @@ class UserRequest extends FormRequest
             'name' => [
                 'required', 'string', 'max:25', new Username(), Rule::unique('users')->ignore($user, 'name'),
             ],
-            'email' => [
-                'sometimes', 'nullable', 'email', 'max:50', Rule::unique('users')->ignore($user, 'email'),
-            ],
+            'email' => $user === null || $this->user()->can('admin.users.personal')
+                ? ['sometimes', 'nullable', 'email', 'max:50', Rule::unique('users')->ignore($user, 'email')]
+                : ['missing'],
             'password' => [Rule::requiredIf($user === null), 'nullable', Password::default()],
             'money' => ['filled', 'numeric', 'min:0'],
             'role' => ['required', 'integer', 'exists:roles,id'],

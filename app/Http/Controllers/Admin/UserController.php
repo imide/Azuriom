@@ -42,7 +42,7 @@ class UserController extends Controller
     /**
      * Send a notification to one or all users.
      *
-     * @throws \Illuminate\Validation\ValidationException;
+     * @throws \Illuminate\Validation\ValidationException
      */
     public function notify(Request $request, ?User $user = null)
     {
@@ -77,7 +77,7 @@ class UserController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @throws \Illuminate\Validation\ValidationException;
+     * @throws \Illuminate\Validation\ValidationException
      */
     public function store(UserRequest $request)
     {
@@ -115,20 +115,17 @@ class UserController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @throws \Illuminate\Validation\ValidationException;
+     * @throws \Illuminate\Validation\ValidationException
      */
     public function update(UserRequest $request, User $user)
     {
-        if ($user->isDeleted()) {
-            return redirect()->back();
-        }
-
-        $user->forceFill(Arr::except($request->validated(), 'role'));
+        $this->validateTarget($request->user(), $user);
 
         $role = Role::find($request->input('role'));
 
         $this->validateRole($request->user(), $role, $user);
 
+        $user->forceFill(Arr::except($request->validated(), 'role'));
         $user->role()->associate($role);
         $user->save();
 
@@ -141,18 +138,16 @@ class UserController extends Controller
         if ($user->wasChanged('password')) {
             event(new PasswordReset($user));
 
-            $log->createEntries(['password' => '**old**'], ['password' => '**new**']);
+            $log?->createEntries(['password' => '**old**'], ['password' => '**new**']);
         }
 
         return to_route('admin.users.edit', $user)
             ->with('success', trans('messages.status.success'));
     }
 
-    public function verifyEmail(User $user)
+    public function verifyEmail(Request $request, User $user)
     {
-        if ($user->isDeleted()) {
-            return redirect()->back();
-        }
+        $this->validateTarget($request->user(), $user);
 
         $user->markEmailAsVerified();
 
@@ -166,8 +161,10 @@ class UserController extends Controller
             ->with('success', trans('admin.users.email.verify_success'));
     }
 
-    public function disable2fa(User $user)
+    public function disable2fa(Request $request, User $user)
     {
+        $this->validateTarget($request->user(), $user);
+
         $user->forceFill([
             'two_factor_secret' => null,
             'two_factor_recovery_codes' => null,
@@ -181,16 +178,20 @@ class UserController extends Controller
             ->with('success', trans('admin.users.2fa.disabled'));
     }
 
-    public function forcePasswordChange(User $user)
+    public function forcePasswordChange(Request $request, User $user)
     {
+        $this->validateTarget($request->user(), $user);
+
         $user->update(['password_changed_at' => null]);
 
         return to_route('admin.users.edit', $user)
             ->with('success', trans('messages.status.success'));
     }
 
-    public function unlinkDiscord(User $user)
+    public function unlinkDiscord(Request $request, User $user)
     {
+        $this->validateTarget($request->user(), $user);
+
         if ($user->discordAccount !== null) {
             LinkedRoles::clearRole($user->discordAccount);
 
@@ -204,41 +205,58 @@ class UserController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(User $user)
+    public function destroy(Request $request, User $user)
     {
-        if ($user->isDeleted() || $user->isAdmin()) {
-            return redirect()->back();
-        }
+        abort_if($user->isAdmin(), 401);
+
+        $this->validateTarget($request->user(), $user);
 
         $user->delete();
 
         ActionLog::log('users.deleted', $user);
 
-        return to_route('admin.users.index', $user)
+        return to_route('admin.users.index')
             ->with('success', trans('messages.status.success'));
     }
 
     /**
-     * Ensure if a user can change the specified role.
+     * Ensure a user can assign the specified role.
      *
-     * @throws \Illuminate\Validation\ValidationException;
+     * @throws \Illuminate\Validation\ValidationException
      */
     protected function validateRole(User $user, Role $role, ?User $target = null): void
     {
         // Admin roles can assign any role as they already have all permissions.
-        if (($target && $user->role->power < $target->role->power)
-            || (! $user->isAdmin() && $user->role->power < $role->power)) {
+        // Other users can only assign roles with lower-or-equal power.
+        if ($user->role->power < $role->power && ! $user->isAdmin()) {
             throw ValidationException::withMessages([
-                'role_id' => trans('admin.roles.unauthorized'),
+                'role' => trans('admin.roles.unauthorized'),
             ]);
         }
 
-        $adminUsers = User::whereRelation('role', 'is_admin', true);
+        $adminUsersCount = User::whereRelation('role', 'is_admin', true)->count();
 
         // So many users lost access to the admin panel because they were the only admin
-        if (! $role->is_admin && $target?->isAdmin() && $adminUsers->count() < 2) {
+        if ($adminUsersCount < 2 && ! $role->is_admin && $target?->isAdmin()) {
             throw ValidationException::withMessages([
-                'role_id' => trans('admin.roles.no_admin'),
+                'role' => trans('admin.roles.no_admin'),
+            ]);
+        }
+    }
+
+    /**
+     * Ensure a user can manage the specified target.
+     *
+     * @throws \Illuminate\Validation\ValidationException
+     */
+    protected function validateTarget(User $user, User $target): void
+    {
+        abort_if($target->isDeleted(), 404);
+
+        // Admin roles can manage any role regardless of their power.
+        if ($user->role->power < $target->role->power && ! $user->isAdmin()) {
+            throw ValidationException::withMessages([
+                'role' => trans('admin.users.unauthorized'),
             ]);
         }
     }

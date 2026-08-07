@@ -111,10 +111,7 @@ class ProfileController extends Controller
         $password = $request->input('password');
         $user = $request->user();
 
-        $user->update([
-            'password' => $password,
-            'access_token' => null,
-        ]);
+        $user->update(['password' => $password]);
 
         Auth::logoutOtherDevices($password);
         event(new PasswordReset($user));

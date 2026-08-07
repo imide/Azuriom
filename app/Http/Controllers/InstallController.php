@@ -304,20 +304,12 @@ class InstallController extends Controller
     protected function setupSteamGame(Request $request, string $game)
     {
         $this->validate($request, [
-            'key' => 'required',
-            'url' => 'required',
+            'key' => ['required'],
+            'url' => ['required', 'url', 'starts_with:https://steamcommunity.com/'],
             'locale' => [Rule::in(static::getAvailableLocaleCodes())],
         ]);
 
-        $profile = Http::get($request->input('url').'?xml=1')->body();
-
-        if (! Str::contains($profile, '<steamID64>')) {
-            throw ValidationException::withMessages(['url' => 'Invalid Steam profile URL.']);
-        }
-
-        preg_match('/<steamID64>(\d{17})<\/steamID64>/', $profile, $matches);
-
-        $gameId = $matches[1];
+        $gameId = $this->steamIdFromUrl($request->input('url'));
         $steamKey = $request->input('key');
 
         try {
@@ -510,6 +502,22 @@ class InstallController extends Controller
         ]);
 
         return view('install.success');
+    }
+
+    private function steamIdFromUrl(string $profileUrl): string
+    {
+        $host = strtolower(rtrim(parse_url($profileUrl, PHP_URL_HOST), '.'));
+        $path = rtrim(parse_url($profileUrl, PHP_URL_PATH) ?? '', '/');
+
+        $profile = Http::get("https://{$host}{$path}?xml=1")->body();
+
+        if (! Str::contains($profile, '<steamID64>')) {
+            throw ValidationException::withMessages(['url' => 'Invalid Steam profile URL.']);
+        }
+
+        preg_match('/<steamID64>(\d{17})<\/steamID64>/', $profile, $matches);
+
+        return $matches[1];
     }
 
     public static function getRequirements(): array

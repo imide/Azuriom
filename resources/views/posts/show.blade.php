@@ -75,7 +75,7 @@
         @endforeach
     </section>
 
-    @can('create', \Azuriom\Models\Comment::class)
+    @can('create', [\Azuriom\Models\Comment::class, $post])
         <div class="card mt-4">
             <div class="card-body">
                 <h3 class="card-title">

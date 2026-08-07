@@ -24,6 +24,8 @@ class BanController extends Controller
      */
     public function store(BanRequest $request, User $user)
     {
+        abort_if($user->isDeleted() || $user->is($request->user()), 404);
+
         Ban::create([
             'user_id' => $user->id,
             'reason' => $request->input('reason'),

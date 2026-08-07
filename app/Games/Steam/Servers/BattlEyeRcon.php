@@ -13,7 +13,7 @@ class BattlEyeRcon extends Query
 
     public function verifyLink(): bool
     {
-        $rcon = $this->connectBattlEye();
+        $rcon = $this->connectRcon();
 
         try {
             // "version" is a harmless command that requires a valid login.

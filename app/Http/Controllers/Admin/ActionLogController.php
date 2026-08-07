@@ -32,7 +32,7 @@ class ActionLogController extends Controller
     public function updateSettings(Request $request)
     {
         $validated = $this->validate($request, [
-            'webhook_url' => ['nullable', 'url'],
+            'webhook_url' => ['nullable', 'url:http,https'],
         ]);
 
         $old = ['logs.webhook_url' => setting('logs.webhook_url')];

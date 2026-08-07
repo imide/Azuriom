@@ -15,7 +15,7 @@ class SocialLinkRequest extends FormRequest
     {
         return [
             'type' => ['required', 'string', 'max:100'],
-            'value' => ['required', 'url', 'max:100'],
+            'value' => ['required', 'url:http,https', 'max:100'],
             'title' => ['required_if:type,other', 'nullable', 'string', 'max:50'],
             'icon' => ['required_if:type,other', 'nullable', 'string', 'max:50'],
             'color' => ['required_if:type,other', 'nullable', 'hex_color'],

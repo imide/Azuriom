@@ -98,7 +98,9 @@ class DiscordWebhook implements Arrayable
      */
     public function send(string $url, bool $throw = true): Response
     {
-        return Http::post($url, $this->toArray())->throwIf($throw);
+        return Http::connectTimeout(5)
+            ->timeout(5)
+            ->post($url, $this->toArray())->throwIf($throw);
     }
 
     /**

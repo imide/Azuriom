@@ -97,7 +97,7 @@ class SettingsController extends Controller
             ...$this->validate($request, [
                 'name' => ['required', 'string', 'max:50'],
                 'description' => ['nullable', 'string', 'max:255'],
-                'url' => ['required', 'url'],
+                'url' => ['required', 'url:http,https'],
                 'timezone' => ['required', 'timezone'],
                 'copyright' => ['nullable', 'string', 'max:150'],
                 'keywords' => ['nullable', 'string', 'max:255'],
@@ -107,7 +107,7 @@ class SettingsController extends Controller
                 'background' => ['nullable', 'exists:images,file'],
                 'money' => ['required', 'string', 'max:15'],
                 'site-key' => ['nullable', 'string', 'size:50'],
-                'posts_webhook' => ['nullable', 'url'],
+                'posts_webhook' => ['nullable', 'url:http,https'],
             ]),
             'users.money_transfer' => $request->filled('user_money_transfer'),
             'url' => rtrim($request->input('url'), '/'), // Remove trailing end slash

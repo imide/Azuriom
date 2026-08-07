@@ -2,6 +2,7 @@
 
 namespace Azuriom\Http\Controllers;
 
+use Azuriom\Models\Like;
 use Azuriom\Models\Post;
 use Illuminate\Http\Request;
 
@@ -12,6 +13,8 @@ class PostLikeController extends Controller
      */
     public function addLike(Request $request, Post $post)
     {
+        $this->authorize('create', [Like::class, $post]);
+
         if (! $post->likes()->where('author_id', $request->user()->id)->exists()) {
             $post->likes()->create();
         }

@@ -3,6 +3,7 @@
 namespace Azuriom\Policies;
 
 use Azuriom\Models\Comment;
+use Azuriom\Models\Post;
 use Azuriom\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
@@ -11,11 +12,13 @@ class CommentPolicy
     use HandlesAuthorization;
 
     /**
-     * Determine whether the user can create comments.
+     * Determine whether the user can comment on the post.
      */
-    public function create(User $user): bool
+    public function create(User $user, ?Post $post = null): bool
     {
-        return $user->can('comments.create');
+        // Keep post optional for simplifying authorization check in views.
+        return ($post === null || $user->can('view', $post))
+            && $user->can('comments.create');
     }
 
     /**

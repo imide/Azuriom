@@ -79,8 +79,6 @@ class LoginController extends Controller
             return $this->sendLockoutResponse($request);
         }
 
-        $this->ensureUserCanLogin($this->credentials($request));
-
         if (! $this->guard()->once($this->credentials($request))) {
             $this->incrementLoginAttempts($request);
 
@@ -104,16 +102,14 @@ class LoginController extends Controller
      */
     protected function loginUser(Request $request, User $user, bool $oauth = false): Response
     {
-        if ($user->isBanned()) {
-            throw ValidationException::withMessages([
-                $this->username() => trans('auth.suspended'),
-            ]);
-        }
+        $this->ensureUserCanLogin($user);
 
         if ($this->isMaintenance($user)) {
             return $this->sendMaintenanceResponse($request);
         }
 
+        // 2FA cannot be enabled directly with OAuth login, as in that case
+        // it should be configured directly through the OAuth provider.
         if (! $oauth && $user->hasTwoFactorAuth()) {
             return $this->redirectTo2fa($request, $user);
         }
@@ -128,13 +124,17 @@ class LoginController extends Controller
      *
      * @throws \Illuminate\Validation\ValidationException
      */
-    protected function ensureUserCanLogin(array $credential): void
+    protected function ensureUserCanLogin(User $user): void
     {
-        $user = User::firstWhere(Arr::except($credential, 'password'));
-
-        if ($user?->mustChangePassword()) {
+        if ($user->mustChangePassword()) {
             throw ValidationException::withMessages([
                 $this->username() => trans('passwords.change'),
+            ]);
+        }
+
+        if ($user->isBanned()) {
+            throw ValidationException::withMessages([
+                $this->username() => trans('auth.suspended'),
             ]);
         }
     }
@@ -151,27 +151,18 @@ class LoginController extends Controller
         $userProfile = Socialite::driver(game()->getSocialiteDriverName())->user();
         $user = User::firstWhere('game_id', (string) $userProfile->getId());
 
-        if ($this->isMaintenance($user)) {
-            return $this->sendMaintenanceResponse($request);
-        }
-
         if ($user === null) {
             $user = $this->registerUser($request, $userProfile);
 
-            $this->guard()->login($user);
-
-            return $request->expectsJson()
-                ? response()->noContent()
-                : redirect($this->redirectPath());
+            return $this->loginUser($request, $user, true);
         }
 
-        if (! $user->hasUploadedAvatar()) {
+        if (! $user->hasUploadedAvatar() && $userProfile->getAvatar() !== null) {
             $user->avatar = $userProfile->getAvatar();
         }
 
         $user->update([
             'name' => $userProfile->getNickname() ?? $userProfile->getName(),
-            'avatar' => $userProfile->getAvatar() ?? $user->avatar,
         ]);
 
         return $this->loginUser($request, $user, true);
@@ -229,7 +220,8 @@ class LoginController extends Controller
      */
     public function verifyCode(Request $request)
     {
-        $this->validate($request, ['code' => 'required']);
+        // Minimal validation, as an invalid string is just rejected anyway.
+        $this->validate($request, ['code' => 'required|string']);
 
         if (! $request->session()->has('login.2fa.id')) {
             throw new AuthenticationException('Unauthenticated.', [$this->guard()], route('login'));
@@ -243,6 +235,12 @@ class LoginController extends Controller
             throw ValidationException::withMessages([
                 'code' => trans('auth.2fa.invalid'),
             ]);
+        }
+
+        $this->ensureUserCanLogin($user);
+
+        if ($this->isMaintenance($user)) {
+            return $this->sendMaintenanceResponse($request);
         }
 
         $this->guard()->login($user, $request->session()->get('login.2fa.remember'));

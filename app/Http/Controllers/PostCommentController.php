@@ -13,7 +13,7 @@ class PostCommentController extends Controller
      */
     public function __construct()
     {
-        $this->authorizeResource(Comment::class);
+        $this->authorizeResource(Comment::class, 'comment', ['except' => 'store']);
     }
 
     /**
@@ -21,6 +21,8 @@ class PostCommentController extends Controller
      */
     public function store(CommentRequest $request, Post $post)
     {
+        $this->authorize('create', [Comment::class, $post]);
+
         $post->comments()->create($request->validated());
 
         return to_route('posts.show', $post);

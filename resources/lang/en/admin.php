@@ -343,6 +343,7 @@ return [
         ],
 
         'edit_profile' => 'Edit profile',
+        'unauthorized' => 'You cannot edit a user whose role is higher than yours.',
 
         'info' => 'User information',
 

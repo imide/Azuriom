@@ -58,6 +58,11 @@
                                         <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
                                         @enderror
                                     </div>
+                                @else
+                                    <div class="mb-3">
+                                        <label class="form-label" for="emailInput">{{ trans('auth.email') }}</label>
+                                        <input type="email" class="form-control" id="emailInput" value="{{ Str::mask($user->email ?? '', '*', 2, -2) }}" disabled>
+                                    </div>
                                 @endcan
                             </div>
 
@@ -79,13 +84,13 @@
 
                         <div class="mb-3">
                             <label class="form-label" for="roleSelect">{{ trans('messages.fields.role') }}</label>
-                            <select class="form-select @error('role_id') is-invalid @enderror" id="roleSelect" name="role" @disabled($user->isDeleted())>
+                            <select class="form-select @error('role') is-invalid @enderror" id="roleSelect" name="role" @disabled($user->isDeleted())>
                                 @foreach($roles as $role)
                                     <option value="{{ $role->id }}" @selected($user->role->is($role))>{{ $role->name }}</option>
                                 @endforeach
                             </select>
 
-                            @error('role_id')
+                            @error('role')
                             <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
                             @enderror
                         </div>
