@@ -82,15 +82,11 @@
                     <label class="form-label" for="captchaSelect">{{ trans('admin.settings.security.captcha.title') }}</label>
                     <select class="form-select @error('captcha') is-invalid @enderror" id="captchaSelect" name="captcha" v-model="type">
                         <option value="">{{ trans('messages.none') }}</option>
-                        <option value="hcaptcha" @selected($captchaType === 'hcaptcha')>
-                            hCaptcha
-                        </option>
-                        <option value="turnstile" @selected($captchaType === 'turnstile')>
-                            Cloudflare Turnstile
-                        </option>
-                        <option value="recaptcha" @selected($captchaType === 'recaptcha')>
-                            Google reCAPTCHA
-                        </option>
+                        @foreach($captchaProviders as $captchaKey => $captchaName)
+                            <option value="{{ $captchaKey }}" @selected($captchaType === $captchaKey)>
+                                {{ $captchaName }}
+                            </option>
+                        @endforeach
                     </select>
 
                     @error('captcha')

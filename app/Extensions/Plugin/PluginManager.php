@@ -463,6 +463,17 @@ class PluginManager extends ExtensionManager
         }
     }
 
+    public function pluginVersion(string $plugin): ?string
+    {
+        $description = Arr::get($this->plugins, $plugin);
+
+        if ($description === null) {
+            return null;
+        }
+
+        return $description->version ?? null;
+    }
+
     protected function getPlugins(bool $ignoreCache): array
     {
         if ($ignoreCache) {

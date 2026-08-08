@@ -229,7 +229,10 @@ if (! function_exists('plugin_asset')) {
      */
     function plugin_asset(string $plugin, string $path): string
     {
-        return asset("plugins/{$plugin}/{$path}");
+        $version = plugins()->pluginVersion($plugin);
+        $query = $version !== null && ! str_contains($path, '?') ? '?v='.$version : '';
+
+        return asset("plugins/{$plugin}/{$path}{$query}");
     }
 }
 

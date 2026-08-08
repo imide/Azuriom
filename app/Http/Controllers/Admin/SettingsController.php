@@ -39,6 +39,12 @@ class SettingsController extends Controller
         'argon2id' => 'Argon2id',
     ];
 
+    private array $captchaProviders = [
+        'hcaptcha' => 'hCaptcha',
+        'turnstile' => 'Cloudflare Turnstile',
+        'recaptcha' => 'Google reCAPTCHA',
+    ];
+
     /**
      * The application instance.
      */
@@ -139,7 +145,7 @@ class SettingsController extends Controller
         $hash = array_keys($this->hashAlgorithms);
 
         $this->validate($request, [
-            'captcha' => ['nullable', 'in:recaptcha,hcaptcha,turnstile'],
+            'captcha' => ['nullable', Rule::in(array_keys($this->captchaProviders))],
             'site_key' => ['required_with:captcha', 'max:50'],
             'secret_key' => ['required_with:captcha', 'max:50'],
             'hash' => [
@@ -292,6 +298,7 @@ class SettingsController extends Controller
             'hashAlgorithms' => $this->hashAlgorithms,
             'currentHash' => config('hashing.driver'),
             'captchaType' => old('captcha', setting('captcha.type')),
+            'captchaProviders' => $this->captchaProviders,
             'loginCaptcha' => old('captcha', setting('captcha.login')),
             'force2fa' => setting('admin.force_2fa'),
             'canForce2fa' => $request->user()->hasTwoFactorAuth(),

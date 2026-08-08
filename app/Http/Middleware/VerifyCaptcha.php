@@ -44,33 +44,45 @@ class VerifyCaptcha
 
     protected function verifyCaptcha(string $type, Request $request, string $secretKey): bool
     {
-        $inputName = match ($type) {
-            'hcaptcha' => 'h-captcha',
-            'recaptcha' => 'g-recaptcha',
-            'turnstile' => 'cf-turnstile',
-            default => null,
+        return match ($type) {
+            'hcaptcha' => $this->verifySiteCaptcha(
+                $request,
+                $secretKey,
+                'h-captcha-response',
+                'https://hcaptcha.com/siteverify',
+            ),
+            'recaptcha' => $this->verifySiteCaptcha(
+                $request,
+                $secretKey,
+                'g-recaptcha-response',
+                'https://www.google.com/recaptcha/api/siteverify',
+            ),
+            'turnstile' => $this->verifySiteCaptcha(
+                $request,
+                $secretKey,
+                'cf-turnstile-response',
+                'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+            ),
+            default => false,
         };
-        $host = match ($type) {
-            'hcaptcha' => 'hcaptcha.com',
-            'recaptcha' => 'www.google.com/recaptcha/api',
-            'turnstile' => 'challenges.cloudflare.com/turnstile/v0',
-            default => null,
-        };
+    }
 
-        if ($host === null || $inputName === null) {
+    protected function verifySiteCaptcha(Request $request, string $secret, string $input, string $url): bool
+    {
+        $code = $request->input($input);
+
+        if (! is_string($code)) {
             return false;
         }
 
-        if (($code = $request->input($inputName.'-response')) === null) {
-            return false;
-        }
+        $response = Http::asForm()
+            ->timeout(self::TIMEOUT)
+            ->post($url, [
+                'secret' => $secret,
+                'response' => $code,
+                'remoteip' => $request->ip(),
+            ]);
 
-        $response = Http::asForm()->timeout(self::TIMEOUT)->post('https://'.$host.'/siteverify', [
-            'secret' => $secretKey,
-            'response' => $code,
-            'remoteip' => $request->ip(),
-        ]);
-
-        return $response->successful() && $response->json('success');
+        return $response->successful() && $response->json('success') === true;
     }
 }
